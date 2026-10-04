@@ -1,0 +1,68 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Piano Pasti</title><style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#fafaf7;--fg:#1c1c1a;--mut:#6b6b66;--card:#fff;--bd:#e2e1da;--ac:#2f7d4f;--wr:#b4472b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#171715;--fg:#ececE6;--mut:#9a9a92;--card:#222220;--bd:#383835;--ac:#5fbf86;--wr:#e0806a}}
+:root[data-theme=dark]{--bg:#171715;--fg:#ececE6;--mut:#9a9a92;--card:#222220;--bd:#383835;--ac:#5fbf86;--wr:#e0806a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:14px}h1{font-size:20px;margin:4px 0 10px}h2{font-size:16px;margin:20px 0 8px}
+nav{display:flex;gap:6px;margin-bottom:12px}nav button{flex:1}
+button,input,select{font:inherit;color:inherit;background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:7px 10px}
+button{cursor:pointer}button.pri,nav button.on{background:var(--ac);color:#fff;border-color:var(--ac)}button.x{padding:4px 9px;color:var(--wr)}
+.n{width:62px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}.mut{color:var(--mut);font-size:13px}
+.sc{overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--bd);padding:6px;text-align:left;vertical-align:top}
+td select{width:100%;margin-top:4px;min-width:130px}td.off{opacity:.55}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px;margin-bottom:8px}
+.card .row{margin:0;justify-content:space-between}.w{flex:1;min-width:120px}
+</style></head><body><main><h1>🍝 Piano Pasti</h1>
+<nav id="nav"></nav><div id="v"></div></main><script>
+const DAYS=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'],MEALS=['Pranzo','Cena'];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,8);
+let S,tab='plan',ref=null,T,D={name:'',ings:[]};
+function seed(){
+const P=[['Pasta',500],['Riso',1000],['Passata di pomodoro',700],['Petto di pollo',600],['Uova',360],['Zucchine',500],['Patate',1000],['Tonno sgocciolato',240],['Ceci cotti',250],['Mozzarella',125],['Carote',1000],['Lenticchie cotte',240],['Parmigiano',200],['Spinaci',400],['Macinato di manzo',400]];
+const R=[['Pasta al pomodoro',[[0,90],[2,100],[12,10]]],['Risotto alle zucchine',[[1,80],[5,150],[12,15]]],['Pollo e patate',[[3,150],[6,250]]],['Frittata di zucchine',[[4,120],[5,150],[12,15]]],['Pasta e ceci',[[0,70],[8,120]]],['Insalata di riso e tonno',[[1,80],[7,60],[10,50]]],['Ragù con pasta',[[0,90],[14,100],[2,100]]],['Lenticchie e carote',[[11,150],[10,100]]],['Pasta e spinaci',[[0,90],[13,150],[12,15]]]];
+const s={v:2,people:2,att:{},plan:{},products:P.map((p,i)=>({id:'p'+i,name:p[0],unit:p[1],per:1,pz:false})),recipes:R.map((r,i)=>({id:'r'+i,name:r[0],ings:r[1].map(x=>({p:'p'+x[0],g:x[1]}))}))};Object.assign(s.products[8],{unit:300,per:3});Object.assign(s.products[4],{unit:1,per:6,pz:true});s.recipes.forEach(r=>r.ings.forEach(i=>{if(i.p==='p4')i.g=2}));return s}
+function mig(s){if(s.v>=2)return s;s.products.forEach(p=>{p.unit=p.pack;p.per=1;p.pz=false;delete p.pack;if(p.name==='Ceci cotti'&&p.unit===250){p.unit=300;p.per=3}if(p.name==='Uova'&&p.unit===360){p.unit=1;p.per=6;p.pz=true;s.recipes.forEach(r=>r.ings.forEach(i=>{if(i.p===p.id&&i.g===120)i.g=2}))}});s.v=2;return s}
+const pk=p=>p.pz?(p.per>1?p.per+' pz':'1 pz'):(p.per>1?p.per+'×'+p.unit+' g':p.unit+' g');
+const pp=(d,m)=>S.att[d+'-'+m]??S.people;
+const slots=()=>{const a=[];for(let d=0;d<7;d++)for(let m=0;m<2;m++)if(pp(d,m)>0)a.push(d+'-'+m);return a};
+function calc(pl){const n={},u={};for(const k in pl){const[d,m]=k.split('-'),pe=pp(d,m),r=S.recipes.find(x=>x.id===pl[k]);if(!pe||!r)continue;for(const i of r.ings){n[i.p]=(n[i.p]||0)+i.g*pe;const o=u[i.p]=u[i.p]||{};o[r.name]=(o[r.name]||0)+1}}
+const rows=[];let waste=0;for(const p of S.products){const g=n[p.id];if(!g)continue;const units=Math.ceil(g/p.unit-1e-9),packs=Math.ceil(units/p.per),left=Math.max(0,units*p.unit-g),spare=packs*p.per-units;waste+=left/p.unit;rows.push({p,g,units,packs,left,spare,use:Object.entries(u[p.id]).map(([x,c])=>esc(x)+(c>1?' ×'+c:'')).join(', ')})}return{rows,waste}}
+function sc(pl){const c={};let a=0,prev;for(const k of slots()){const r=pl[k];c[r]=(c[r]||0)+1;if(r===prev)a++;prev=r}
+return calc(pl).waste*10+.15*Object.values(c).reduce((s,x)=>s+x*x,0)+a}
+function gen(){const ks=slots(),R=S.recipes;if(!ks.length||!R.length)return;const rnd=()=>R[Math.random()*R.length|0].id;let gb=null,gs=1e9;
+for(let r=0;r<8;r++){const pl={};ks.forEach(k=>pl[k]=rnd());let cur=sc(pl);
+for(let i=0;i<3000;i++){const t=2*(1-i/3000)+.01,a=ks[Math.random()*ks.length|0],b=Math.random()<.3?ks[Math.random()*ks.length|0]:a,oa=pl[a],ob=pl[b];
+pl[a]=rnd();if(b!==a)pl[b]=rnd();const s=sc(pl);
+if(s<=cur||Math.random()<Math.exp((cur-s)/t)){cur=s;if(s<gs){gs=s;gb={...pl}}}else{pl[a]=oa;pl[b]=ob}}}
+S.plan=gb;save();render()}
+function save(){clearTimeout(T);T=setTimeout(async()=>{try{if(ref)await ref.set(S);else localStorage.setItem('pp',JSON.stringify(S))}catch(e){}},400)}
+function setAtt(k,v){S.att[k]=Math.max(0,+v||0);save();render()}
+function vPlan(){const c=calc(S.plan);
+let h=`<div class=row><label>Persone di base <input type=number min=1 class=n value=${S.people} onchange="S.people=Math.max(1,+this.value||1);save();render()"></label><button class=pri onclick="gen()">Genera piano</button></div><p class=mut>Metti 0 per togliere un pasto. Un numero più basso se manca qualcuno. Il piano minimizza gli avanzi delle confezioni.</p><div class=sc><table><tr><th></th>${MEALS.map(m=>`<th>${m}</th>`).join('')}</tr>`;
+for(let d=0;d<7;d++){h+=`<tr><th>${DAYS[d]}</th>`;for(let m=0;m<2;m++){const k=d+'-'+m,pe=pp(d,m);
+h+=`<td class="${pe?'':'off'}"><input type=number min=0 class=n value=${pe} onchange="setAtt('${k}',this.value)"> <span class=mut>pers.</span>`+(pe?`<select onchange="S.plan['${k}']=this.value;save();render()"><option value="">—</option>${S.recipes.map(r=>`<option value="${r.id}" ${S.plan[k]===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select>`:`<div class=mut>saltato</div>`)+'</td>'}h+='</tr>'}
+h+='</table></div><h2>Lista della spesa</h2>';
+if(!c.rows.length)return h+'<p class=mut>Genera un piano per vedere cosa comprare.</p>';
+h+='<div class=sc><table><tr><th>Prodotto</th><th>Serve</th><th>Da comprare</th><th>Avanzo</th><th>Usato in</th></tr>';
+for(const r of c.rows){const U=r.p.pz?'pz':'g',ok=r.left<=r.p.unit*.05+1e-9;h+=`<tr><td>${esc(r.p.name)}</td><td>${+r.g.toFixed(1)} ${U}</td><td>${r.packs} conf. <span class=mut>(${pk(r.p)})</span>${r.spare?`<div class=mut>in dispensa: ${r.spare} ${r.p.pz?'pz':'unità chiuse'}</div>`:''}</td><td style="color:${ok?'var(--ac)':r.left>r.p.unit*.25?'var(--wr)':'inherit'}">${ok?'✓ tutto usato':+r.left.toFixed(1)+' '+U}</td><td class=mut>${r.use}</td></tr>`}
+return h+`</table></div><p class=mut>Avanzo aperto totale: ${Math.round(c.rows.reduce((s,r)=>s+(r.p.pz?0:r.left),0))} g</p>`}
+function vRec(){const pr=id=>S.products.find(p=>p.id===id)||{name:'?'};
+let h=S.recipes.map(r=>`<div class=card><div class=row><b>${esc(r.name)}</b><button class=x onclick="S.recipes=S.recipes.filter(x=>x.id!=='${r.id}');save();render()">✕</button></div><div class=mut>${r.ings.map(i=>`${esc(pr(i.p).name)} ${i.g} ${pr(i.p).pz?'pz':'g'}`).join(' · ')} (a persona)</div></div>`).join('');
+h+=`<h2>Nuova ricetta</h2><div class=card><input class=w style="width:100%" placeholder="Nome ricetta" value="${esc(D.name)}" oninput="D.name=this.value">`;
+D.ings.forEach((x,i)=>{h+=`<div class=row style="margin-top:6px"><select class=w onchange="D.ings[${i}].p=this.value;render()">${S.products.map(p=>`<option value="${p.id}" ${p.id===x.p?'selected':''}>${esc(p.name)}</option>`).join('')}</select><input type=number class=n min=0 step=any value=${x.g} onchange="D.ings[${i}].g=+this.value"> ${pr(x.p).pz?'pz':'g'}<button class=x onclick="D.ings.splice(${i},1);render()">✕</button></div>`});
+return h+`<div class=row style="margin-top:8px"><button onclick="if(S.products.length){D.ings.push({p:S.products[0].id,g:S.products[0].pz?1:100});render()}">+ ingrediente (quantità a persona)</button><button class=pri onclick="addRec()">Salva ricetta</button></div></div>`}
+function addRec(){const ings=D.ings.filter(i=>i.p&&i.g>0);if(!D.name.trim()||!ings.length)return;S.recipes.push({id:uid(),name:D.name.trim(),ings});D={name:'',ings:[]};save();render()}
+function vProd(){let h='<p class=mut>Unità = il pezzo singolo sigillato (barattolo, uovo, pacco). "Unità per confezione" = quante ne contiene il multipack. Solo l\'unità aperta può generare spreco: le altre restano chiuse in dispensa.</p>';
+h+=S.products.map((p,i)=>`<div class=card><div class=row><input class=w value="${esc(p.name)}" onchange="S.products[${i}].name=this.value;save()"><button class=x onclick="delP('${p.id}')">✕</button></div><div class=row style="margin-top:6px;justify-content:flex-start"><select onchange="setMode(${i},this.value)"><option value=g ${p.pz?'':'selected'}>a peso (g)</option><option value=pz ${p.pz?'selected':''}>a pezzi</option></select>${p.pz?'':`<label><input type=number class=n min=1 value=${p.unit} onchange="S.products[${i}].unit=Math.max(1,+this.value||1);save()"> g per unità</label>`}<label><input type=number class=n min=1 value=${p.per} onchange="S.products[${i}].per=Math.max(1,+this.value||1);save()"> unità per confezione</label></div></div>`).join('');
+return h+`<h2>Nuovo prodotto</h2><div class=card><div class=row><input class=w id=pn placeholder="Nome"><select id=pm><option value=g>a peso (g)</option><option value=pz>a pezzi</option></select></div><div class=row style="margin-top:6px;justify-content:flex-start"><input type=number class=n id=pk placeholder="g" min=1><span class=mut>g per unità</span><input type=number class=n id=pc min=1 value=1><span class=mut>unità per confezione</span><button class=pri onclick="addP()">Aggiungi</button></div></div>`}
+function setMode(i,v){const p=S.products[i];p.pz=v==='pz';p.unit=p.pz?1:(p.unit>1?p.unit:100);save();render()}
+function addP(){const n=$('pn').value.trim(),pz=$('pm').value==='pz',g=pz?1:+$('pk').value;if(!n||g<1)return;S.products.push({id:uid(),name:n,unit:g,per:Math.max(1,+$('pc').value||1),pz});save();render()}
+function delP(id){S.products=S.products.filter(p=>p.id!==id);S.recipes.forEach(r=>r.ings=r.ings.filter(i=>i.p!==id));D.ings=D.ings.filter(i=>i.p!==id);save();render()}
+const $=id=>document.getElementById(id);
+function render(){$('nav').innerHTML=[['plan','Piano'],['rec','Ricette'],['prod','Prodotti']].map(t=>`<button class="${tab===t[0]?'on':''}" onclick="tab='${t[0]}';render()">${t[1]}</button>`).join('');
+$('v').innerHTML=tab==='plan'?vPlan():tab==='rec'?vRec():vProd()}
+(async()=>{try{S=mig(JSON.parse(localStorage.getItem('pp')))}catch(e){S=null}S=S||seed();render();
+try{if(window.claude){const db=await claude.use('db');if(db){ref=db.doc('app/state');const s=await ref.get();if(s.exists){const d=JSON.parse(JSON.stringify(s.data()));S=mig(d);if(d.v!==s.data().v)save()}else await ref.set(S);render()}}}catch(e){ref=null}})();
+</script></body></html>
